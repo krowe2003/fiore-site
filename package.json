@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
   "name": "fiore-clean",
-=======
-  "name": "fiore-site",
->>>>>>> c4b59f4ec6b6560d07cad7033459e29529a8832d
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,10 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@supabase/supabase-js": "^2.105.1",
-=======
->>>>>>> c4b59f4ec6b6560d07cad7033459e29529a8832d
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
