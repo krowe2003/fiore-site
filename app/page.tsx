@@ -192,7 +192,7 @@ ${customerNotes}
   return (
     <div style={{ background: "black", color: "white", minHeight: "100vh", padding: "20px" }}>
 
-      <h1 style={{ color: "red" }}>Fiore Electrical Inc.</h1>
+      <h1 style={{ color: "red" }}>Fiore Electrical Supply</h1>
 
       {/* 🔥 LOGIN HIDDEN UNLESS ?admin=true */}
       {showAdminLogin && !user && (
