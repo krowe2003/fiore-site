@@ -17,10 +17,16 @@ const inputStyle = {
   marginBottom: "10px"
 };
 
+type ProductSize = {
+  size: string;
+  price: number;
+};
+
 type Item = {
   id: number;
   name: string;
-  sizes: string[];
+  sizes_json?: ProductSize[];
+  sizes?: string[];
   category: string;
   image?: string;
 };
@@ -39,7 +45,9 @@ export default function Home() {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
 
   const [newName, setNewName] = useState("");
-  const [newSizes, setNewSizes] = useState("");
+  const [newSizes, setNewSizes] = useState<ProductSize[]>([
+    { size: "", price: 0 }
+  ]);
   const [newCategory, setNewCategory] = useState("Parts");
   const [newImage, setNewImage] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -74,26 +82,41 @@ export default function Home() {
   }, []);
 
   const fetchProducts = async () => {
-    setLoading(true);
+  setLoading(true);
 
-    const { data, error } = await supabase.from("products").select("*");
-    if (error) return alert(error.message);
+  const { data, error } = await supabase
+    .from("products")
+    .select("*");
 
-    if (data) {
-      setItems(
-        data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          sizes: item.sizes ? item.sizes.split(",") : [],
-          category: item.category || "Parts",
-          image: item.image || ""
-        }))
-      );
-    }
-
+  if (error) {
+    alert(error.message);
     setLoading(false);
-  };
+    return;
+  }
 
+  if (data) {
+    setItems(
+      data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+
+        // NEW JSON products
+        sizes_json: item.sizes_json || [],
+
+        // OLD legacy products
+        sizes:
+          typeof item.sizes === "string"
+            ? item.sizes.split(",")
+            : item.sizes || [],
+
+        category: item.category || "Parts",
+        image: item.image || ""
+      }))
+    );
+  }
+
+  setLoading(false);
+};
   const login = async () => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -130,6 +153,10 @@ export default function Home() {
   };
 
   const addProduct = async () => {
+      alert("clicked");
+
+    console.log(newSizes);
+
     if (!user) return alert("Login required");
     if (!newName) return alert("Enter a name");
 
@@ -140,10 +167,12 @@ export default function Home() {
       if (uploaded) imageUrl = uploaded;
     }
 
+    console.log(newSizes);
+
     const { error } = await supabase.from("products").insert([
       {
         name: newName,
-        sizes: newSizes,
+        sizes_json: newSizes,
         category: newCategory,
         image: imageUrl
       }
@@ -152,7 +181,7 @@ export default function Home() {
     if (error) return alert(error.message);
 
     setNewName("");
-    setNewSizes("");
+    setNewSizes([{ size: "", price: 0 }]);
     setNewImage("");
     setFile(null);
 
@@ -164,9 +193,19 @@ export default function Home() {
     fetchProducts();
   };
 
-  const addToCart = (name: string, size: string) => {
-    setCart((prev) => [...prev, `${name} (${size})`]);
-  };
+  const addToCart = (name: string, item: any) => {
+  const size = item?.size || item;
+
+  const price =
+    item?.price !== undefined
+      ? ` - $${Number(item.price).toFixed(2)}`
+      : "";
+
+  setCart((prev) => [
+    ...prev,
+    `${name} (${size})${price}`
+  ]);
+};
 
   const removeFromCart = (index: number) => {
     setCart((prev) => prev.filter((_, i) => i !== index));
@@ -186,7 +225,7 @@ Notes:
 ${customerNotes}
 `;
 
-    window.location.href = `mailto:fioreelectrical@gmail.com?subject=Quote Request&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:fioreelectricalinc@gmail.com?subject=Quote Request&body=${encodeURIComponent(body)}`;
   };
 
   return (
@@ -254,20 +293,37 @@ ${customerNotes}
                 )}
               </h3>
 
-              {item.sizes.map((size, i) => (
+              {(item.sizes_json || item.sizes || []).map((s: any, i: number) => (
                 <div
                   key={i}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: "5px"
+                    marginBottom: "8px",
+                    gap: "10px"
                   }}
                 >
-                  <span>{size}</span>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "15px",
+                      alignItems: "center"
+                    }}
+                  >
+                    <span>
+                      {s?.size || s}
+                    </span>
+
+                    <span style={{ color: "#999" }}>
+                        {s?.price !== undefined
+                         ? `$${Number(s.price).toFixed(2)}`
+                           : "$0.00"}
+                    </span>
+                  </div>
 
                   <button
-                    onClick={() => addToCart(item.name, size)}
+                    onClick={() => addToCart(item.name, s)}
                     style={{
                       background: "red",
                       color: "white",
@@ -312,7 +368,78 @@ ${customerNotes}
           </select>
 
           <input placeholder="Product Name" value={newName} onChange={(e) => setNewName(e.target.value)} style={inputStyle} />
-          <input placeholder="Sizes" value={newSizes} onChange={(e) => setNewSizes(e.target.value)} style={inputStyle} />
+          {newSizes.map((s, index) => (
+  <div
+    key={index}
+    style={{
+      display: "flex",
+      gap: "10px",
+      marginBottom: "10px",
+      alignItems: "center"
+    }}
+  >
+    <input
+      placeholder="Size"
+      value={s.size}
+      onChange={(e) => {
+        const updated = [...newSizes];
+        updated[index].size = e.target.value;
+        setNewSizes(updated);
+      }}
+      style={inputStyle}
+    />
+
+    <input
+      type="number"
+      placeholder="Price"
+      value={s.price}
+      onChange={(e) => {
+        const updated = [...newSizes];
+        updated[index].price = Number(e.target.value);
+        setNewSizes(updated);
+      }}
+      style={inputStyle}
+    />
+
+    <button
+      type="button"
+      onClick={() => {
+        setNewSizes(newSizes.filter((_, i) => i !== index));
+      }}
+      style={{
+        background: "red",
+        color: "white",
+        border: "none",
+        padding: "8px 12px",
+        borderRadius: "6px",
+        cursor: "pointer"
+      }}
+    >
+      X
+    </button>
+  </div>
+))}
+
+<button
+  type="button"
+  onClick={() =>
+    setNewSizes([
+      ...newSizes,
+      { size: "", price: 0 }
+    ])
+  }
+  style={{
+    background: "#444",
+    color: "white",
+    border: "none",
+    padding: "10px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    marginBottom: "15px"
+  }}
+>
+  + Add Size
+</button>
 
           <input placeholder="Image URL (optional)" value={newImage} onChange={(e) => setNewImage(e.target.value)} style={inputStyle} />
 
