@@ -231,7 +231,34 @@ ${customerNotes}
   return (
     <div style={{ background: "black", color: "white", minHeight: "100vh", padding: "20px" }}>
 
-      <h1 style={{ color: "red" }}>Fiore Electrical Supply</h1>
+      <div
+  style={{
+    borderBottom: "2px solid #1d9bf0",
+    paddingBottom: "20px",
+    marginBottom: "30px"
+  }}
+>
+  <h1
+    style={{
+      color: "#ff2b2b",
+      fontSize: "42px",
+      margin: 0,
+      letterSpacing: "1px"
+    }}
+  >
+    Fiore Electrical Supply
+  </h1>
+
+  <p
+    style={{
+      color: "#b0b0b0",
+      marginTop: "10px",
+      fontSize: "16px"
+    }}
+  >
+    Professional Electrical Equipment & Supply
+  </p>
+</div>
 
       {/* 🔥 LOGIN HIDDEN UNLESS ?admin=true */}
       {showAdminLogin && !user && (
@@ -252,10 +279,10 @@ ${customerNotes}
             onClick={() => setSelectedCategory(cat)}
             style={{
               padding: "10px",
-              background: selectedCategory === cat ? "red" : "gray",
+              background: selectedCategory === cat ? "#d10000" : "#10243d",
               color: "white",
-              border: "none",
-              borderRadius: "5px",
+              borderRadius: "10px",
+              border: "1px solid #1e3a5f",
               cursor: "pointer"
             }}
           >
@@ -266,21 +293,43 @@ ${customerNotes}
 
       {loading && <p>Loading...</p>}
 
-      {!loading &&
-        items
-          .filter((item) => item.category === selectedCategory)
-          .map((item) => (
-            <div
+      {!loading && (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+      gap: "20px",
+      marginTop: "20px"
+    }}
+  >
+    {items
+      .filter((item) => item.category === selectedCategory)
+      .map((item) => (
+        <div
               key={item.id}
               style={{
-                border: "1px solid blue",
-                padding: "10px",
-                marginTop: "10px",
-                borderRadius: "8px"
-              }}
+                  background: "#111827",
+                  border: "1px solid #1e3a5f",
+                  padding: "20px",
+                  borderRadius: "18px",
+                  boxShadow: "0 0 14px rgba(29, 155, 240, 0.12)",
+                  transition: "0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px"
+}}
             >
               {item.image && (
-                <img src={item.image} style={{ width: "200px" }} />
+                <img
+  src={item.image}
+  style={{
+    width: "100%",
+    height: "300px",
+    objectFit: "cover",
+    borderRadius: "12px",
+    border: "1px solid #1e3a5f",
+  }}
+/>
               )}
 
               <h3>
@@ -341,6 +390,8 @@ ${customerNotes}
               {user && <button onClick={() => deleteProduct(item.id)}>Delete</button>}
             </div>
           ))}
+          </div>
+      )}
 
       <h2>Quote</h2>
 
