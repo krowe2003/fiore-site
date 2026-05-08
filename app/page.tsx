@@ -57,6 +57,7 @@ export default function Home() {
   ]);
   const [newCategory, setNewCategory] = useState("Parts");
   const [newImage, setNewImage] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
   const [customerName, setCustomerName] = useState("");
@@ -192,7 +193,24 @@ useEffect(() => {
 
     console.log(newSizes);
 
-    const { error } = await supabase.from("products").insert([
+   let error;
+
+if (editingId) {
+  const result = await supabase
+    .from("products")
+    .update({
+      name: newName,
+      sizes_json: newSizes,
+      category: newCategory,
+      image: imageUrl
+    })
+    .eq("id", editingId);
+
+  error = result.error;
+} else {
+  const result = await supabase
+    .from("products")
+    .insert([
       {
         name: newName,
         sizes_json: newSizes,
@@ -200,6 +218,9 @@ useEffect(() => {
         image: imageUrl
       }
     ]);
+
+  error = result.error;
+}
 
     if (error) return alert(error.message);
 
@@ -215,7 +236,26 @@ useEffect(() => {
     await supabase.from("products").delete().eq("id", id);
     fetchProducts();
   };
+const startEdit = (item: Item) => {
+  setEditingId(item.id);
 
+  setNewName(item.name);
+
+  setNewCategory(item.category);
+
+  setNewSizes(
+    item.sizes_json || [
+      { size: "", price: 0 }
+    ]
+  );
+
+  setNewImage(item.image || "");
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+};
   const addToCart = (name: string, item: any) => {
   const size = item?.size || item;
 
@@ -731,7 +771,43 @@ onClick={() => setCartOpen(true)}
                 </div>
               ))}
 
-              {user && <button onClick={() => deleteProduct(item.id)}>Delete</button>}
+              {user && (
+  <div
+    style={{
+      display: "flex",
+      gap: "10px",
+      marginTop: "10px"
+    }}
+  >
+    <button
+      onClick={() => startEdit(item)}
+      style={{
+        background: "#1e3a5f",
+        color: "white",
+        border: "none",
+        padding: "8px 12px",
+        borderRadius: "6px",
+        cursor: "pointer"
+      }}
+    >
+      Edit
+    </button>
+
+    <button
+      onClick={() => deleteProduct(item.id)}
+      style={{
+        background: "#d10000",
+        color: "white",
+        border: "none",
+        padding: "8px 12px",
+        borderRadius: "6px",
+        cursor: "pointer"
+      }}
+    >
+      Delete
+    </button>
+  </div>
+)}
             </div>
           ))}
           </div>
