@@ -66,6 +66,7 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [adminMessage, setAdminMessage] = useState("");
   const categories = ["Parts", "Equipment", "Vehicles"];
 
   useEffect(() => {
@@ -88,6 +89,11 @@ export default function Home() {
 
   getUser();
   fetchProducts();
+  setAdminMessage("✓ Product Deleted");
+
+setTimeout(() => {
+  setAdminMessage("");
+}, 2000);
 
   const { data: listener } = supabase.auth.onAuthStateChange(
     (_event, session) => {
@@ -223,6 +229,15 @@ if (editingId) {
 }
 
     if (error) return alert(error.message);
+    setAdminMessage(
+  editingId
+    ? "✓ Product Updated"
+    : "✓ Product Added"
+);
+
+setTimeout(() => {
+  setAdminMessage("");
+}, 2000);
 
     setNewName("");
     setNewSizes([{ size: "", price: 0 }]);
@@ -484,7 +499,18 @@ ${customerNotes}
 
 <button
 onClick={() => setCartOpen(true)}
+onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
   style={{
+    transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
     position: "absolute",
     top: "30px",
     right: "30px",
@@ -568,7 +594,18 @@ onClick={() => setCartOpen(true)}
             behavior: "smooth"
           })
       }
+      onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
       style={{
+        transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
         background: "#d10000",
         color: "white",
         border: "none",
@@ -584,7 +621,18 @@ onClick={() => setCartOpen(true)}
 
     <button
       onClick={() => setCartOpen(true)}
+      onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
       style={{
+        transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
         background: "#1e3a5f",
         color: "white",
         border: "none",
@@ -617,7 +665,18 @@ onClick={() => setCartOpen(true)}
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
+            onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
             style={{
+              transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
               padding: "10px",
               background: selectedCategory === cat ? "#d10000" : "#10243d",
               color: "white",
@@ -757,7 +816,18 @@ onClick={() => setCartOpen(true)}
 
                   <button
                     onClick={() => addToCart(item.name, s)}
+                    onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
                     style={{
+                      transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
                       background: "red",
                       color: "white",
                       border: "none",
@@ -781,7 +851,18 @@ onClick={() => setCartOpen(true)}
   >
     <button
       onClick={() => startEdit(item)}
+      onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
       style={{
+        transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
         background: "#1e3a5f",
         color: "white",
         border: "none",
@@ -795,7 +876,18 @@ onClick={() => setCartOpen(true)}
 
     <button
       onClick={() => deleteProduct(item.id)}
+      onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
       style={{
+        transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
         background: "#d10000",
         color: "white",
         border: "none",
@@ -819,6 +911,7 @@ onClick={() => setCartOpen(true)}
       {cart.map((item, i) => (
   <div
     key={i}
+    
     style={{
       display: "flex",
       justifyContent: "space-between",
@@ -851,7 +944,18 @@ onClick={() => setCartOpen(true)}
 
       <button
         onClick={() => removeFromCart(i)}
+        onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
         style={{
+          transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
           marginTop: "5px",
           background: "#d10000",
           color: "white",
@@ -875,7 +979,18 @@ onClick={() => setCartOpen(true)}
       </div>
 {cartOpen && (
   <div
+  onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
     style={{
+      transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
       position: "fixed",
       top: 0,
       right: 0,
@@ -901,7 +1016,18 @@ onClick={() => setCartOpen(true)}
 
       <button
         onClick={() => setCartOpen(false)}
+        onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
         style={{
+          transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
           background: "red",
           color: "white",
           border: "none",
@@ -943,7 +1069,18 @@ onClick={() => setCartOpen(true)}
 >
   <button
     onClick={() => decreaseQuantity(i)}
+    onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
     style={{
+      transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
       background: "#222",
       color: "white",
       border: "none",
@@ -963,7 +1100,18 @@ onClick={() => setCartOpen(true)}
 
   <button
     onClick={() => increaseQuantity(i)}
+    onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
     style={{
+      transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
       background: "#222",
       color: "white",
       border: "none",
@@ -984,7 +1132,18 @@ onClick={() => setCartOpen(true)}
 
         <button
           onClick={() => removeFromCart(i)}
+          onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
           style={{
+            transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
             marginTop: "10px",
             background: "#d10000",
             color: "white",
@@ -1068,7 +1227,18 @@ onClick={() => setCartOpen(true)}
 </div>
     <button
       onClick={sendQuote}
+      onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
       style={{
+        transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
         width: "100%",
         background: "#d10000",
         color: "white",
@@ -1087,7 +1257,18 @@ onClick={() => setCartOpen(true)}
 
 {showToast && (
   <div
+  onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
     style={{
+      transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
       position: "fixed",
       bottom: "30px",
       right: "30px",
@@ -1106,7 +1287,27 @@ onClick={() => setCartOpen(true)}
     ✓ Added to Quote Cart
   </div>
 )}
-
+{adminMessage && (
+  <div
+    style={{
+      position: "fixed",
+      top: "30px",
+      right: "30px",
+      background: "rgba(17, 24, 39, 0.92)",
+      backdropFilter: "blur(14px)",
+      WebkitBackdropFilter: "blur(14px)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      color: "white",
+      padding: "14px 20px",
+      borderRadius: "12px",
+      boxShadow: "0 0 25px rgba(0,0,0,0.35)",
+      zIndex: 6000,
+      fontWeight: "bold"
+    }}
+  >
+    {adminMessage}
+  </div>
+)}
       {user && (
         <div>
           <h2>Admin</h2>
@@ -1156,7 +1357,18 @@ onClick={() => setCartOpen(true)}
       onClick={() => {
         setNewSizes(newSizes.filter((_, i) => i !== index));
       }}
+      onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
       style={{
+        transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
         background: "red",
         color: "white",
         border: "none",
@@ -1178,7 +1390,18 @@ onClick={() => setCartOpen(true)}
       { size: "", price: 0 }
     ])
   }
+  onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
   style={{
+    transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
     background: "#444",
     color: "white",
     border: "none",
@@ -1193,9 +1416,109 @@ onClick={() => setCartOpen(true)}
 
           <input placeholder="Image URL (optional)" value={newImage} onChange={(e) => setNewImage(e.target.value)} style={inputStyle} />
 
-          <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          <label
+    onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
 
-          <button onClick={addProduct}>Add Product</button>
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
+  style={{
+    transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
+    display: "inline-block",
+    background: "#1e3a5f",
+    color: "white",
+    padding: "12px 18px",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    marginTop: "10px",
+    marginBottom: "15px"
+  }}
+>
+  Choose Product Image
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(e) =>
+      setFile(e.target.files?.[0] || null)
+    }
+    style={{ display: "none" }}
+  />
+</label>
+
+          <button
+  onClick={addProduct}
+  onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+
+  e.currentTarget.style.boxShadow =
+    "0 0 18px rgba(209,0,0,0.35)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+
+  e.currentTarget.style.boxShadow =
+    "0 0 14px rgba(209,0,0,0.28)";
+}}
+  style={{
+    transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
+    background: "#d10000",
+    color: "white",
+    border: "none",
+    padding: "12px 18px",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    boxShadow: "0 0 14px rgba(209,0,0,0.28)",
+  }}
+>
+  {editingId ? "Save Changes" : "Add Product"}
+</button>
+{editingId && (
+  <button
+    onClick={() => {
+      setEditingId(null);
+      setNewName("");
+      setNewSizes([
+        { size: "", price: 0 }
+      ]);
+      setNewCategory("Parts");
+      setNewImage("");
+    }}
+    onMouseEnter={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(-2px) scale(1.02)";
+}}
+
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform =
+    "translateY(0px) scale(1)";
+}}
+    style={{
+      transition:
+  "transform 0.2s ease, box-shadow 0.2s ease",
+      marginLeft: "10px",
+      background: "#444",
+      color: "white",
+      border: "none",
+      padding: "10px 14px",
+      borderRadius: "6px",
+      cursor: "pointer"
+    }}
+  >
+    Cancel Edit
+  </button>
+)}
         </div>
       )}
 
