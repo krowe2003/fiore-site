@@ -34,7 +34,14 @@ type Item = {
 export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("Parts");
-  const [cart, setCart] = useState<string[]>([]);
+  const [cart, setCart] = useState<
+  {
+    name: string;
+    size: string;
+    price: number;
+    quantity: number;
+  }[]
+>([]);
   const [loading, setLoading] = useState(true);
 
   const [user, setUser] = useState<any>(null);
@@ -55,7 +62,7 @@ export default function Home() {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
-
+  const [search, setSearch] = useState("");
   const categories = ["Parts", "Equipment", "Vehicles"];
 
   useEffect(() => {
@@ -198,36 +205,80 @@ export default function Home() {
 
   const price =
     item?.price !== undefined
-      ? ` - $${Number(item.price).toFixed(2)}`
-      : "";
+      ? Number(item.price)
+      : 0;
 
-  setCart((prev) => [
-    ...prev,
-    `${name} (${size})${price}`
-  ]);
+  setCart((prev) => {
+    const existing = prev.find(
+      (p) => p.name === name && p.size === size
+    );
+
+    if (existing) {
+      return prev.map((p) =>
+        p.name === name && p.size === size
+          ? {
+              ...p,
+              quantity: p.quantity + 1
+            }
+          : p
+      );
+    }
+
+    return [
+      ...prev,
+      {
+        name,
+        size,
+        price,
+        quantity: 1
+      }
+    ];
+  });
 };
 
   const removeFromCart = (index: number) => {
-    setCart((prev) => prev.filter((_, i) => i !== index));
-  };
+  setCart((prev) =>
+    prev.filter((_, i) => i !== index)
+  );
+};
 
-  const sendQuote = () => {
-    if (cart.length === 0) return alert("No items");
+const sendQuote = () => {
+  if (cart.length === 0) return alert("No items");
 
-    const body = `
+  const itemsText = cart
+    .map(
+      (item) =>
+        `${item.name} (${item.size}) x${item.quantity} - $${(
+          item.price * item.quantity
+        ).toFixed(2)}`
+    )
+    .join("\n");
+
+  const total = cart.reduce(
+    (sum, item) =>
+      sum + item.price * item.quantity,
+    0
+  );
+
+  const body = `
 Name: ${customerName}
 Email: ${customerEmail}
 
 Items:
-${cart.join("\n")}
+${itemsText}
+
+Estimated Total:
+$${total.toFixed(2)}
 
 Notes:
 ${customerNotes}
 `;
 
-    window.location.href = `mailto:fioreelectricalinc@gmail.com?subject=Quote Request&body=${encodeURIComponent(body)}`;
-  };
-
+  window.location.href =
+    `mailto:fioreelectricalinc@gmail.com?subject=Quote Request&body=${encodeURIComponent(
+      body
+    )}`;
+};
   return (
     <div style={{ background: "black", color: "white", minHeight: "100vh", padding: "20px" }}>
 
@@ -290,6 +341,24 @@ ${customerNotes}
           </button>
         ))}
       </div>
+      <input
+  type="text"
+  placeholder="Search products..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+  style={{
+    width: "100%",
+    padding: "12px",
+    marginTop: "20px",
+    marginBottom: "10px",
+    borderRadius: "10px",
+    border: "1px solid #1e3a5f",
+    background: "#111827",
+    color: "white",
+    fontSize: "16px",
+    outline: "none"
+  }}
+/>
 
       {loading && <p>Loading...</p>}
 
@@ -303,7 +372,11 @@ ${customerNotes}
     }}
   >
     {items
-      .filter((item) => item.category === selectedCategory)
+      .filter(
+  (item) =>
+    item.category === selectedCategory &&
+    item.name.toLowerCase().includes(search.toLowerCase())
+)
       .map((item) => (
         <div
               key={item.id}
@@ -395,12 +468,56 @@ ${customerNotes}
 
       <h2>Quote</h2>
 
-      {cart.map((c, i) => (
-        <div key={i}>
-          {c}
-          <button onClick={() => removeFromCart(i)}>X</button>
-        </div>
-      ))}
+      {cart.map((item, i) => (
+  <div
+    key={i}
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      background: "#111827",
+      padding: "12px",
+      borderRadius: "10px",
+      marginBottom: "10px",
+      border: "1px solid #1e3a5f"
+    }}
+  >
+    <div>
+      <div style={{ fontWeight: "bold" }}>
+        {item.name}
+      </div>
+
+      <div style={{ color: "#b0b0b0", fontSize: "14px" }}>
+        {item.size}
+      </div>
+
+      <div style={{ color: "#1d9bf0" }}>
+        Qty: {item.quantity}
+      </div>
+    </div>
+
+    <div style={{ textAlign: "right" }}>
+      <div style={{ color: "#1d9bf0" }}>
+        ${(item.price * item.quantity).toFixed(2)}
+      </div>
+
+      <button
+        onClick={() => removeFromCart(i)}
+        style={{
+          marginTop: "5px",
+          background: "#d10000",
+          color: "white",
+          border: "none",
+          borderRadius: "6px",
+          padding: "4px 8px",
+          cursor: "pointer"
+        }}
+      >
+        Remove
+      </button>
+    </div>
+  </div>
+))}
 
       <input placeholder="Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={inputStyle} />
       <input placeholder="Email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} style={inputStyle} />
