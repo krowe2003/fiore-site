@@ -465,7 +465,7 @@ ${customerNotes}
           ))}
           </div>
       )}
-
+    
       <h2>Quote</h2>
 
       {cart.map((item, i) => (
@@ -524,7 +524,7 @@ ${customerNotes}
       <textarea placeholder="Notes" value={customerNotes} onChange={(e) => setCustomerNotes(e.target.value)} style={inputStyle} />
 
       <button onClick={sendQuote}>Send Quote</button>
-
+      
       {user && (
         <div>
           <h2>Admin</h2>
@@ -616,6 +616,7 @@ ${customerNotes}
           <button onClick={addProduct}>Add Product</button>
         </div>
       )}
+
     </div>
   );
 }
