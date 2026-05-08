@@ -63,6 +63,7 @@ export default function Home() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
   const [search, setSearch] = useState("");
+  const [cartOpen, setCartOpen] = useState(false);
   const categories = ["Parts", "Equipment", "Vehicles"];
 
   useEffect(() => {
@@ -309,6 +310,25 @@ ${customerNotes}
   >
     Professional Electrical Equipment & Supply
   </p>
+
+<button
+onClick={() => setCartOpen(true)}
+  style={{
+    position: "absolute",
+    top: "30px",
+    right: "30px",
+    background: "#d10000",
+    color: "white",
+    border: "none",
+    borderRadius: "10px",
+    padding: "12px 18px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    boxShadow: "0 0 10px rgba(209,0,0,0.35)"
+  }}
+>
+  🛒 Cart ({cart.length})
+</button>
 </div>
 
       {/* 🔥 LOGIN HIDDEN UNLESS ?admin=true */}
@@ -366,7 +386,8 @@ ${customerNotes}
   <div
     style={{
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 320px))",
+      justifyContent: "start",
       gap: "20px",
       marginTop: "20px"
     }}
@@ -466,6 +487,7 @@ ${customerNotes}
           </div>
       )}
     
+      <div style={{ display: "none" }}>
       <h2>Quote</h2>
 
       {cart.map((item, i) => (
@@ -480,7 +502,7 @@ ${customerNotes}
       borderRadius: "10px",
       marginBottom: "10px",
       border: "1px solid #1e3a5f"
-    }}
+      }}
   >
     <div>
       <div style={{ fontWeight: "bold" }}>
@@ -524,7 +546,177 @@ ${customerNotes}
       <textarea placeholder="Notes" value={customerNotes} onChange={(e) => setCustomerNotes(e.target.value)} style={inputStyle} />
 
       <button onClick={sendQuote}>Send Quote</button>
-      
+      </div>
+{cartOpen && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      right: 0,
+      width: "400px",
+      height: "100vh",
+      background: "#111827",
+      borderLeft: "2px solid #1e3a5f",
+      padding: "20px",
+      zIndex: 1000,
+      overflowY: "auto",
+      boxShadow: "-5px 0 20px rgba(0,0,0,0.4)"
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "20px"
+      }}
+    >
+      <h2>Quote Cart</h2>
+
+      <button
+        onClick={() => setCartOpen(false)}
+        style={{
+          background: "red",
+          color: "white",
+          border: "none",
+          borderRadius: "6px",
+          padding: "6px 10px",
+          cursor: "pointer"
+        }}
+      >
+        X
+      </button>
+    </div>
+
+    {cart.map((item, i) => (
+      <div
+        key={i}
+        style={{
+          background: "#1a2332",
+          padding: "12px",
+          borderRadius: "10px",
+          marginBottom: "10px",
+          border: "1px solid #1e3a5f"
+        }}
+      >
+        <div style={{ fontWeight: "bold" }}>
+          {item.name}
+        </div>
+
+        <div style={{ color: "#b0b0b0" }}>
+          {item.size}
+        </div>
+
+        <div style={{ color: "#1d9bf0" }}>
+          Qty: {item.quantity}
+        </div>
+
+        <div style={{ marginTop: "5px" }}>
+          ${(item.price * item.quantity).toFixed(2)}
+        </div>
+
+        <button
+          onClick={() => removeFromCart(i)}
+          style={{
+            marginTop: "10px",
+            background: "#d10000",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            padding: "5px 10px",
+            cursor: "pointer"
+          }}
+        >
+          Remove
+        </button>
+      </div>
+    ))}
+
+    <input
+      placeholder="Name"
+      value={customerName}
+      onChange={(e) => setCustomerName(e.target.value)}
+      style={inputStyle}
+    />
+
+    <input
+      placeholder="Email"
+      value={customerEmail}
+      onChange={(e) => setCustomerEmail(e.target.value)}
+      style={inputStyle}
+    />
+
+    <textarea
+      placeholder="Notes"
+      value={customerNotes}
+      onChange={(e) => setCustomerNotes(e.target.value)}
+      style={inputStyle}
+    />
+<div
+  style={{
+    marginTop: "20px",
+    marginBottom: "15px",
+    padding: "15px",
+    background: "#1a2332",
+    borderRadius: "10px",
+    border: "1px solid #1e3a5f"
+  }}
+>
+  <div
+    style={{
+      fontSize: "14px",
+      color: "#b0b0b0",
+      marginBottom: "5px"
+    }}
+  >
+    Estimated Total
+  </div>
+
+  <div
+    style={{
+      fontSize: "28px",
+      fontWeight: "bold",
+      color: "#1d9bf0"
+    }}
+  >
+    $
+    {cart
+      .reduce(
+        (sum, item) =>
+          sum + item.price * item.quantity,
+        0
+      )
+      .toFixed(2)}
+  </div>
+
+  <div
+    style={{
+      marginTop: "10px",
+      fontSize: "12px",
+      color: "#888"
+    }}
+  >
+    *Final Pricing will be confirmed upon quote review*
+  </div>
+</div>
+    <button
+      onClick={sendQuote}
+      style={{
+        width: "100%",
+        background: "#d10000",
+        color: "white",
+        border: "none",
+        padding: "12px",
+        borderRadius: "10px",
+        cursor: "pointer",
+        fontWeight: "bold",
+        marginTop: "10px"
+      }}
+    >
+      Send Quote
+    </button>
+  </div>
+)}
       {user && (
         <div>
           <h2>Admin</h2>
