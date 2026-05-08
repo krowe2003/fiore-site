@@ -64,30 +64,45 @@ export default function Home() {
   const [customerNotes, setCustomerNotes] = useState("");
   const [search, setSearch] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const categories = ["Parts", "Equipment", "Vehicles"];
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("admin") === "true") {
-      setShowAdminLogin(true);
+  const params = new URLSearchParams(window.location.search);
+
+  const savedCart = localStorage.getItem("fiore-cart");
+
+  if (savedCart) {
+    setCart(JSON.parse(savedCart));
+  }
+
+  if (params.get("admin") === "true") {
+    setShowAdminLogin(true);
+  }
+
+  const getUser = async () => {
+    const { data } = await supabase.auth.getUser();
+    setUser(data.user);
+  };
+
+  getUser();
+  fetchProducts();
+
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      setUser(session?.user ?? null);
     }
+  );
 
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-    };
+  return () => listener.subscription.unsubscribe();
+}, []);
 
-    getUser();
-    fetchProducts();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
-
-    return () => listener.subscription.unsubscribe();
-  }, []);
+useEffect(() => {
+  localStorage.setItem(
+    "fiore-cart",
+    JSON.stringify(cart)
+  );
+}, [cart]); 
 
   const fetchProducts = async () => {
   setLoading(true);
@@ -235,11 +250,53 @@ export default function Home() {
       }
     ];
   });
+  setShowToast(true);
+
+setTimeout(() => {
+  setShowToast(false);
+}, 2000);
 };
+
 
   const removeFromCart = (index: number) => {
   setCart((prev) =>
     prev.filter((_, i) => i !== index)
+  );
+};
+
+const increaseQuantity = (index: number) => {
+  setCart((prev) =>
+    prev.map((item, i) => {
+      if (i !== index) return item;
+
+      // prevent vehicle quantity above 1
+      if (
+      item.price > 10000 &&
+      item.quantity >= 1
+        ) {
+  return item;
+}
+
+      return {
+        ...item,
+        quantity: item.quantity + 1
+      };
+    })
+  );
+};
+
+const decreaseQuantity = (index: number) => {
+  setCart((prev) =>
+    prev
+      .map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              quantity: item.quantity - 1
+            }
+          : item
+      )
+      .filter((item) => item.quantity > 0)
   );
 };
 
@@ -281,35 +338,109 @@ ${customerNotes}
     )}`;
 };
   return (
-    <div style={{ background: "black", color: "white", minHeight: "100vh", padding: "20px" }}>
+    <div
+  style={{
+    background:
+  `
+  radial-gradient(circle at top left, rgba(209,0,0,0.18), transparent 28%),
+  radial-gradient(circle at top right, rgba(29,155,240,0.12), transparent 30%),
+  radial-gradient(circle at bottom center, rgba(255,255,255,0.03), transparent 35%),
+  linear-gradient(to bottom, #111827 0%, #050505 55%, #000000 100%)
+  `,
+    color: "white",
+    minHeight: "100vh",
+    padding: "20px"
+  }}
+>
+  <div
+  style={{
+    position: "fixed",
+    top: "-200px",
+    left: "-200px",
+    width: "500px",
+    height: "500px",
+    background: "rgba(209,0,0,0.12)",
+    filter: "blur(120px)",
+    borderRadius: "50%",
+    zIndex: 0,
+    pointerEvents: "none"
+  }}
+/>
+
+<div
+  style={{
+    position: "fixed",
+    bottom: "-250px",
+    right: "-200px",
+    width: "500px",
+    height: "500px",
+    background: "rgba(29,155,240,0.10)",
+    filter: "blur(140px)",
+    borderRadius: "50%",
+    zIndex: 0,
+    pointerEvents: "none"
+  }}
+/>
 
       <div
   style={{
-    borderBottom: "2px solid #1d9bf0",
-    paddingBottom: "20px",
-    marginBottom: "30px"
+  borderBottom: "1px solid #1e3a5f",
+  paddingBottom: "30px",
+  marginBottom: "40px",
+  background:
+    "linear-gradient(to bottom, #111827, #000000)",
+  borderRadius: "20px",
+  padding: "30px",
+  position: "relative",
+  overflow: "hidden",
+  boxShadow: "0 0 40px rgba(0,0,0,0.45)"
+}}
+>
+  <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "20px"
   }}
 >
-  <h1
+  <img
+    src="/logo.png"
+    alt="Fiore Electrical Logo"
     style={{
-      color: "#ff2b2b",
-      fontSize: "42px",
-      margin: 0,
-      letterSpacing: "1px"
-    }}
-  >
-    Fiore Electrical Supply
-  </h1>
+  width: "130px",
+  height: "130px",
+  objectFit: "contain",
+  filter:
+    "drop-shadow(0 0 18px rgba(255,0,0,0.35))",
+  zIndex: 2,
+  position: "relative"
+}}
+  />
 
-  <p
-    style={{
-      color: "#b0b0b0",
-      marginTop: "10px",
-      fontSize: "16px"
-    }}
-  >
-    Professional Electrical Equipment & Supply
-  </p>
+  <div>
+    <h1
+      style={{
+        color: "#ff2b2b",
+        fontSize: "48px",
+        margin: 0,
+        letterSpacing: "2px",
+        fontWeight: "bold"
+      }}
+    >
+      Fiore Electrical Supply
+    </h1>
+
+    <p
+      style={{
+        color: "#b0b0b0",
+        marginTop: "8px",
+        fontSize: "18px"
+      }}
+    >
+      Commercial Electrical Equipment & Supply
+    </p>
+  </div>
+</div>
 
 <button
 onClick={() => setCartOpen(true)}
@@ -329,6 +460,104 @@ onClick={() => setCartOpen(true)}
 >
   🛒 Cart ({cart.length})
 </button>
+</div>
+
+<div
+  style={{
+    marginBottom: "50px",
+    padding: "50px 40px",
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: "24px",
+    background:
+      "linear-gradient(to right, #111827, #0a0a0a)",
+    border: "1px solid #1e3a5f",
+    boxShadow: "0 0 30px rgba(0,0,0,0.35)"
+  }}
+>
+  <div
+  style={{
+    position: "absolute",
+    inset: 0,
+    backgroundImage:
+      "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+    backgroundSize: "40px 40px",
+    opacity: 0.2,
+    pointerEvents: "none"
+  }}
+/>
+  <div
+    style={{
+      fontSize: "54px",
+      fontWeight: "bold",
+      lineHeight: "1.1",
+      maxWidth: "850px",
+      marginBottom: "20px"
+    }}
+  >
+    Commercial Electrical Supply & Equipment
+  </div>
+
+  <div
+    style={{
+      color: "#b0b0b0",
+      fontSize: "20px",
+      maxWidth: "700px",
+      lineHeight: "1.6",
+      marginBottom: "30px"
+    }}
+  >
+    Serving contractors, industrial projects,
+    commercial businesses, and electrical
+    professionals with reliable equipment and
+    supply solutions.
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      gap: "15px",
+      flexWrap: "wrap"
+    }}
+  >
+    <button
+      onClick={() =>
+        document
+          .getElementById("products-section")
+          ?.scrollIntoView({
+            behavior: "smooth"
+          })
+      }
+      style={{
+        background: "#d10000",
+        color: "white",
+        border: "none",
+        padding: "14px 22px",
+        borderRadius: "10px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        fontSize: "16px"
+      }}
+    >
+      Browse Products
+    </button>
+
+    <button
+      onClick={() => setCartOpen(true)}
+      style={{
+        background: "#1e3a5f",
+        color: "white",
+        border: "none",
+        padding: "14px 22px",
+        borderRadius: "10px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        fontSize: "16px"
+      }}
+    >
+      Open Quote Cart
+    </button>
+  </div>
 </div>
 
       {/* 🔥 LOGIN HIDDEN UNLESS ?admin=true */}
@@ -384,6 +613,7 @@ onClick={() => setCartOpen(true)}
 
       {!loading && (
   <div
+        id="products-section"
     style={{
       display: "grid",
       gridTemplateColumns: "repeat(auto-fit, minmax(280px, 320px))",
@@ -400,17 +630,37 @@ onClick={() => setCartOpen(true)}
 )
       .map((item) => (
         <div
-              key={item.id}
-              style={{
-                  background: "#111827",
-                  border: "1px solid #1e3a5f",
-                  padding: "20px",
-                  borderRadius: "18px",
-                  boxShadow: "0 0 14px rgba(29, 155, 240, 0.12)",
-                  transition: "0.2s ease",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "15px"
+  key={item.id}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform =
+      "translateY(-6px)";
+
+    e.currentTarget.style.boxShadow =
+      "0 0 30px rgba(29,155,240,0.18)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform =
+      "translateY(0px)";
+
+    e.currentTarget.style.boxShadow =
+      "0 0 20px rgba(0,0,0,0.35)";
+  }}
+  style={{
+  background: "rgba(17, 24, 39, 0.72)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  padding: "20px",
+  borderRadius: "18px",
+  boxShadow: "0 0 20px rgba(0,0,0,0.35)",
+  transition:
+  "transform 0.25s ease, box-shadow 0.25s ease, border 0.25s ease",
+  cursor: "pointer",
+  transform: "translateY(0px)",
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  gap: "15px"
 }}
             >
               {item.image && (
@@ -607,9 +857,50 @@ onClick={() => setCartOpen(true)}
           {item.size}
         </div>
 
-        <div style={{ color: "#1d9bf0" }}>
-          Qty: {item.quantity}
-        </div>
+       <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginTop: "8px"
+  }}
+>
+  <button
+    onClick={() => decreaseQuantity(i)}
+    style={{
+      background: "#222",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      width: "28px",
+      height: "28px",
+      cursor: "pointer",
+      fontWeight: "bold"
+    }}
+  >
+    −
+  </button>
+
+  <span style={{ color: "#1d9bf0", fontWeight: "bold" }}>
+    {item.quantity}
+  </span>
+
+  <button
+    onClick={() => increaseQuantity(i)}
+    style={{
+      background: "#222",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      width: "28px",
+      height: "28px",
+      cursor: "pointer",
+      fontWeight: "bold"
+    }}
+  >
+    +
+  </button>
+</div>
 
         <div style={{ marginTop: "5px" }}>
           ${(item.price * item.quantity).toFixed(2)}
@@ -717,6 +1008,29 @@ onClick={() => setCartOpen(true)}
     </button>
   </div>
 )}
+
+{showToast && (
+  <div
+    style={{
+      position: "fixed",
+      bottom: "30px",
+      right: "30px",
+      background: "rgba(17, 24, 39, 0.88)",
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      color: "white",
+      padding: "14px 20px",
+      borderRadius: "12px",
+      boxShadow: "0 0 25px rgba(0,0,0,0.35)",
+      zIndex: 5000,
+      fontWeight: "bold"
+    }}
+  >
+    ✓ Added to Quote Cart
+  </div>
+)}
+
       {user && (
         <div>
           <h2>Admin</h2>
