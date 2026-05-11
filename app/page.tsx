@@ -29,6 +29,7 @@ type Item = {
   sizes?: string[];
   category: string;
   image?: string;
+  description?: string;
 };
 
 export default function Home() {
@@ -37,7 +38,10 @@ export default function Home() {
   const [cart, setCart] = useState<
   {
     name: string;
-    size: string;
+    size: {
+      size: string;
+      price: number;
+    };
     price: number;
     quantity: number;
   }[]
@@ -57,7 +61,11 @@ export default function Home() {
   ]);
   const [newCategory, setNewCategory] = useState("Parts");
   const [newImage, setNewImage] = useState("");
+  const [newDescription, setNewDescription] =
+  useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+  useState<Item | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
   const [customerName, setCustomerName] = useState("");
@@ -75,8 +83,22 @@ export default function Home() {
   const savedCart = localStorage.getItem("fiore-cart");
 
   if (savedCart) {
-    setCart(JSON.parse(savedCart));
-  }
+  const parsed = JSON.parse(savedCart);
+
+  const normalized = parsed.map((item: any) => ({
+    ...item,
+
+    size:
+      typeof item.size === "object"
+        ? item.size
+        : {
+            size: item.size,
+            price: item.price || 0
+          }
+  }));
+
+  setCart(normalized);
+}
 
   if (params.get("admin") === "true") {
     setShowAdminLogin(true);
@@ -140,7 +162,8 @@ useEffect(() => {
             : item.sizes || [],
 
         category: item.category || "Parts",
-        image: item.image || ""
+        image: item.image || "",
+        description: item.description || ""
       }))
     );
   }
@@ -205,11 +228,12 @@ if (editingId) {
   const result = await supabase
     .from("products")
     .update({
-      name: newName,
-      sizes_json: newSizes,
-      category: newCategory,
-      image: imageUrl
-    })
+  name: newName,
+  sizes_json: newSizes,
+  category: newCategory,
+  image: imageUrl,
+  description: newDescription
+})
     .eq("id", editingId);
 
   error = result.error;
@@ -218,11 +242,12 @@ if (editingId) {
     .from("products")
     .insert([
       {
-        name: newName,
-        sizes_json: newSizes,
-        category: newCategory,
-        image: imageUrl
-      }
+  name: newName,
+  sizes_json: newSizes,
+  category: newCategory,
+  image: imageUrl,
+  description: newDescription
+}
     ]);
 
   error = result.error;
@@ -265,28 +290,37 @@ const startEdit = (item: Item) => {
   );
 
   setNewImage(item.image || "");
+  setNewDescription(item.description || "");
 
   window.scrollTo({
     top: 0,
     behavior: "smooth"
   });
 };
-  const addToCart = (name: string, item: any) => {
-  const size = item?.size || item;
+ const addToCart = (name: string, item: any) => {
+  const sizeObj = {
+    size:
+      typeof item === "string"
+        ? item
+        : item.size,
 
-  const price =
-    item?.price !== undefined
-      ? Number(item.price)
-      : 0;
+    price:
+      typeof item === "string"
+        ? 0
+        : Number(item.price)
+  };
 
   setCart((prev) => {
     const existing = prev.find(
-      (p) => p.name === name && p.size === size
+      (p) =>
+        p.name === name &&
+        p.size.size === sizeObj.size
     );
 
     if (existing) {
       return prev.map((p) =>
-        p.name === name && p.size === size
+        p.name === name &&
+        p.size.size === sizeObj.size
           ? {
               ...p,
               quantity: p.quantity + 1
@@ -299,19 +333,19 @@ const startEdit = (item: Item) => {
       ...prev,
       {
         name,
-        size,
-        price,
+        size: sizeObj,
+        price: sizeObj.price,
         quantity: 1
       }
     ];
   });
+
   setShowToast(true);
 
-setTimeout(() => {
-  setShowToast(false);
-}, 2000);
+  setTimeout(() => {
+    setShowToast(false);
+  }, 2000);
 };
-
 
   const removeFromCart = (index: number) => {
   setCart((prev) =>
@@ -361,7 +395,7 @@ const sendQuote = () => {
   const itemsText = cart
     .map(
       (item) =>
-        `${item.name} (${item.size}) x${item.quantity} - $${(
+        `${item.name} (${item.size.size}) x${item.quantity} - $${(
           item.price * item.quantity
         ).toFixed(2)}`
     )
@@ -730,6 +764,7 @@ onMouseLeave={(e) => {
       .map((item) => (
         <div
   key={item.id}
+  onClick={() => setSelectedProduct(item)}
   onMouseEnter={(e) => {
     e.currentTarget.style.transform =
       "translateY(-6px)";
@@ -785,61 +820,70 @@ onMouseLeave={(e) => {
                 )}
               </h3>
 
-              {(item.sizes_json || item.sizes || []).map((s: any, i: number) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "8px",
-                    gap: "10px"
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "15px",
-                      alignItems: "center"
-                    }}
-                  >
-                    <span>
-                      {s?.size || s}
-                    </span>
+              {(item.sizes_json || item.sizes || []).map(
+  (s: any, i: number) => {
+    const sizeObj =
+      typeof s === "string"
+        ? {
+            size: s,
+            price: 0
+          }
+        : s;
 
-                    <span style={{ color: "#999" }}>
-                        {s?.price !== undefined
-                         ? `$${Number(s.price).toFixed(2)}`
-                           : "$0.00"}
-                    </span>
-                  </div>
+    return (
+      <div
+        key={i}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "8px",
+          gap: "10px"
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: "15px",
+            alignItems: "center"
+          }}
+        >
+          <span>{sizeObj.size}</span>
 
-                  <button
-                    onClick={() => addToCart(item.name, s)}
-                    onMouseEnter={(e) => {
-  e.currentTarget.style.transform =
-    "translateY(-2px) scale(1.02)";
-}}
+          <span style={{ color: "#999" }}>
+            ${Number(sizeObj.price).toFixed(2)}
+          </span>
+        </div>
 
-onMouseLeave={(e) => {
-  e.currentTarget.style.transform =
-    "translateY(0px) scale(1)";
-}}
-                    style={{
-                      transition:
-  "transform 0.2s ease, box-shadow 0.2s ease",
-                      background: "red",
-                      color: "white",
-                      border: "none",
-                      padding: "5px 10px",
-                      borderRadius: "4px",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Add
-                  </button>
-                </div>
-              ))}
+        <button
+          onClick={() =>
+            addToCart(item.name, sizeObj)
+          }
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform =
+              "translateY(-2px) scale(1.02)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform =
+              "translateY(0px) scale(1)";
+          }}
+          style={{
+            transition:
+              "transform 0.2s ease, box-shadow 0.2s ease",
+            background: "red",
+            color: "white",
+            border: "none",
+            padding: "5px 10px",
+            borderRadius: "4px",
+            cursor: "pointer"
+          }}
+        >
+          Add
+        </button>
+      </div>
+    );
+  }
+)}
 
               {user && (
   <div
@@ -929,7 +973,7 @@ onMouseLeave={(e) => {
       </div>
 
       <div style={{ color: "#b0b0b0", fontSize: "14px" }}>
-        {item.size}
+        {item.size.size} — ${item.size.price}
       </div>
 
       <div style={{ color: "#1d9bf0" }}>
@@ -1056,8 +1100,8 @@ onMouseLeave={(e) => {
         </div>
 
         <div style={{ color: "#b0b0b0" }}>
-          {item.size}
-        </div>
+  {item.size.size} — ${item.size.price}
+</div>
 
        <div
   style={{
@@ -1308,6 +1352,139 @@ onMouseLeave={(e) => {
     {adminMessage}
   </div>
 )}
+{selectedProduct && (
+  <div
+    onClick={() => setSelectedProduct(null)}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.75)",
+      backdropFilter: "blur(8px)",
+      zIndex: 7000,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: "20px"
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        background: "rgba(17,24,39,0.92)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: "24px",
+        maxWidth: "900px",
+        width: "100%",
+        maxHeight: "90vh",
+        overflowY: "auto",
+        padding: "30px",
+        boxShadow: "0 0 40px rgba(0,0,0,0.45)"
+      }}
+    >
+      <button
+        onClick={() => setSelectedProduct(null)}
+        style={{
+          background: "#d10000",
+          color: "white",
+          border: "none",
+          padding: "10px 14px",
+          borderRadius: "8px",
+          cursor: "pointer",
+          float: "right",
+          marginBottom: "20px"
+        }}
+      >
+        Close
+      </button>
+
+      {selectedProduct.image && (
+        <img
+          src={selectedProduct.image}
+          style={{
+            width: "100%",
+            maxHeight: "420px",
+            objectFit: "cover",
+            borderRadius: "18px",
+            marginBottom: "25px"
+          }}
+        />
+      )}
+
+      <h1
+        style={{
+          fontSize: "42px",
+          marginBottom: "10px"
+        }}
+      >
+        {selectedProduct.name}
+      </h1>
+
+      <p
+        style={{
+          color: "#b0b0b0",
+          marginBottom: "30px"
+        }}
+      >
+        {selectedProduct.category}
+      </p>
+{selectedProduct.description && (
+  <div
+    style={{
+      marginBottom: "30px",
+      lineHeight: "1.7",
+      color: "#d0d0d0",
+      fontSize: "16px"
+    }}
+  >
+    {selectedProduct.description}
+  </div>
+)}
+      <div
+        style={{
+          display: "grid",
+          gap: "15px"
+        }}
+      >
+        {selectedProduct.sizes_json?.map((s, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              background: "rgba(255,255,255,0.04)",
+              padding: "14px",
+              borderRadius: "12px"
+            }}
+          >
+            <div>
+              <strong>{s.size}</strong>
+              <div>${s.price}</div>
+            </div>
+
+            <button
+              onClick={() =>
+                addToCart(selectedProduct.name, s)
+              }
+              style={{
+                background: "#d10000",
+                color: "white",
+                border: "none",
+                padding: "10px 16px",
+                borderRadius: "8px",
+                cursor: "pointer"
+              }}
+            >
+              Add to Cart
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
       {user && (
         <div>
           <h2>Admin</h2>
@@ -1415,7 +1592,18 @@ onMouseLeave={(e) => {
 </button>
 
           <input placeholder="Image URL (optional)" value={newImage} onChange={(e) => setNewImage(e.target.value)} style={inputStyle} />
-
+<textarea
+  placeholder="Product Description"
+  value={newDescription}
+  onChange={(e) =>
+    setNewDescription(e.target.value)
+  }
+  style={{
+    ...inputStyle,
+    minHeight: "120px",
+    resize: "vertical"
+  }}
+/>
           <label
     onMouseEnter={(e) => {
   e.currentTarget.style.transform =
