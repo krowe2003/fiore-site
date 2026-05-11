@@ -7,14 +7,28 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+<style jsx global>{`
+  input::placeholder,
+  textarea::placeholder {
+    color: #8b949e;
+  }
+`}</style>
+
 const inputStyle = {
-  background: "#f5f5f5",
-  color: "#000",
-  padding: "10px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
+  background: "rgba(17, 24, 39, 0.82)",
+  color: "white",
+  padding: "14px",
+  borderRadius: "12px",
+  border: "1px solid rgba(255,255,255,0.08)",
   width: "100%",
-  marginBottom: "10px"
+  marginBottom: "12px",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  outline: "none",
+  fontSize: "15px",
+  transition:
+    "border 0.2s ease, box-shadow 0.2s ease",
+  boxShadow: "0 0 12px rgba(0,0,0,0.18)"
 };
 
 type ProductSize = {
@@ -63,19 +77,28 @@ export default function Home() {
   const [newImage, setNewImage] = useState("");
   const [newDescription, setNewDescription] =
   useState("");
+  const [newCategoryName, setNewCategoryName] =
+  useState("");
+  
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] =
   useState<Item | null>(null);
   const [file, setFile] = useState<File | null>(null);
+const [filterCategory, setFilterCategory] =
+  useState("All");
 
+const [selectedPrice, setSelectedPrice] =
+  useState("All");
   const [customerName, setCustomerName] = useState("");
+  
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
   const [search, setSearch] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [adminMessage, setAdminMessage] = useState("");
-  const categories = ["Parts", "Equipment", "Vehicles"];
+  const [categories, setCategories] =
+  useState<string[]>([]);
 
   useEffect(() => {
   const params = new URLSearchParams(window.location.search);
@@ -111,6 +134,7 @@ export default function Home() {
 
   getUser();
   fetchProducts();
+  
   setAdminMessage("✓ Product Deleted");
 
 setTimeout(() => {
@@ -132,7 +156,54 @@ useEffect(() => {
     JSON.stringify(cart)
   );
 }, [cart]); 
+  const fetchCategories = async () => {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*");
 
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  if (data) {
+    setCategories(
+      data.map((c: any) => c.name)
+    );
+  }
+};
+
+const addCategory = async () => {
+  if (!newCategoryName) return;
+
+  const { error } = await supabase
+    .from("categories")
+    .insert([
+      {
+        name: newCategoryName
+      }
+    ]);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setNewCategoryName("");
+
+  fetchCategories();
+};
+
+const deleteCategory = async (
+  name: string
+) => {
+  await supabase
+    .from("categories")
+    .delete()
+    .eq("name", name);
+
+  fetchCategories();
+};
   const fetchProducts = async () => {
   setLoading(true);
 
@@ -479,7 +550,7 @@ ${customerNotes}
   background:
     "linear-gradient(to bottom, #111827, #000000)",
   borderRadius: "20px",
-  padding: "30px",
+  padding: "20px 30px",
   position: "relative",
   overflow: "hidden",
   boxShadow: "0 0 40px rgba(0,0,0,0.45)"
@@ -488,10 +559,26 @@ ${customerNotes}
   <div
   style={{
     display: "flex",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: "20px"
+    gap: "20px",
+    width: "100%",
+    flexWrap:
+      typeof window !== "undefined" &&
+      window.innerWidth < 768
+        ? "wrap"
+        : "nowrap"
   }}
 >
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "20px",
+    marginLeft:"12px"
+  }}
+></div>
+
   <img
     src="/logo.png"
     alt="Fiore Electrical Logo"
@@ -510,7 +597,10 @@ ${customerNotes}
     <h1
       style={{
         color: "#ff2b2b",
-        fontSize: "48px",
+        fontSize:
+  window.innerWidth < 768
+    ? "30px"
+    : "48px",
         margin: 0,
         letterSpacing: "2px",
         fontWeight: "bold"
@@ -528,44 +618,81 @@ ${customerNotes}
     >
       Commercial Electrical Equipment & Supply
     </p>
+    </div>
+
+  <div
+    style={{
+      display: "flex",
+      gap: "15px",
+      flexWrap: "wrap"
+    }}
+  >
+    <button
+      onClick={() =>
+        document
+          .getElementById("products-section")
+          ?.scrollIntoView({
+            behavior: "smooth"
+          })
+      }
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform =
+          "translateY(-2px) scale(1.02)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform =
+          "translateY(0px) scale(1)";
+      }}
+      style={{
+        transition:
+          "transform 0.2s ease, box-shadow 0.2s ease",
+        background: "#d10000",
+        color: "white",
+        border: "none",
+        padding: "14px 22px",
+        borderRadius: "10px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        fontSize: "16px"
+      }}
+    >
+      Browse Products
+    </button>
+
+    <button
+      onClick={() => setCartOpen(true)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform =
+          "translateY(-2px) scale(1.02)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform =
+          "translateY(0px) scale(1)";
+      }}
+      style={{
+        transition:
+          "transform 0.2s ease, box-shadow 0.2s ease",
+        background: "#1e3a5f",
+        color: "white",
+        border: "none",
+        padding: "14px 22px",
+        borderRadius: "10px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        fontSize: "16px"
+      }}
+    >
+      Open Quote Cart
+    </button>
   </div>
 </div>
 
-<button
-onClick={() => setCartOpen(true)}
-onMouseEnter={(e) => {
-  e.currentTarget.style.transform =
-    "translateY(-2px) scale(1.02)";
-}}
-
-onMouseLeave={(e) => {
-  e.currentTarget.style.transform =
-    "translateY(0px) scale(1)";
-}}
-  style={{
-    transition:
-  "transform 0.2s ease, box-shadow 0.2s ease",
-    position: "absolute",
-    top: "30px",
-    right: "30px",
-    background: "#d10000",
-    color: "white",
-    border: "none",
-    borderRadius: "10px",
-    padding: "12px 18px",
-    cursor: "pointer",
-    fontWeight: "bold",
-    boxShadow: "0 0 10px rgba(209,0,0,0.35)"
-  }}
->
-  🛒 Cart ({cart.length})
-</button>
 </div>
 
 <div
   style={{
     marginBottom: "50px",
-    padding: "50px 40px",
+    padding: "32px 40px",
     position: "relative",
     overflow: "hidden",
     borderRadius: "24px",
@@ -585,13 +712,29 @@ onMouseLeave={(e) => {
     opacity: 0.2,
     pointerEvents: "none"
   }}
+  
 />
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+  window.innerWidth < 900
+    ? "1fr"
+    : "2fr 1fr",
+    gap: "25px",
+    alignItems: "start"
+  }}
+>
+<div>
   <div
     style={{
-      fontSize: "54px",
+      fontSize:
+  window.innerWidth < 768
+    ? "34px"
+    : "54px",
       fontWeight: "bold",
       lineHeight: "1.1",
-      maxWidth: "850px",
+      maxWidth: "1400px",
       marginBottom: "20px"
     }}
   >
@@ -620,66 +763,99 @@ onMouseLeave={(e) => {
       flexWrap: "wrap"
     }}
   >
-    <button
-      onClick={() =>
-        document
-          .getElementById("products-section")
-          ?.scrollIntoView({
-            behavior: "smooth"
-          })
-      }
-      onMouseEnter={(e) => {
-  e.currentTarget.style.transform =
-    "translateY(-2px) scale(1.02)";
-}}
+    </div>
 
-onMouseLeave={(e) => {
-  e.currentTarget.style.transform =
-    "translateY(0px) scale(1)";
-}}
+<div
+  style={{
+    background: "rgba(17,24,39,0.72)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: "22px",
+    padding: "28px",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    boxShadow: "0 0 25px rgba(0,0,0,0.28)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "flex-start"
+  }}
+>
+  <h2
+    style={{
+      marginTop: 0,
+      marginBottom: "20px",
+      fontSize: "28px"
+    }}
+  >
+    Contact Us
+  </h2>
+
+  <div style={{ marginBottom: "18px" }}>
+    <div
       style={{
-        transition:
-  "transform 0.2s ease, box-shadow 0.2s ease",
-        background: "#d10000",
-        color: "white",
-        border: "none",
-        padding: "14px 22px",
-        borderRadius: "10px",
-        fontWeight: "bold",
-        cursor: "pointer",
-        fontSize: "16px"
+        color: "#888",
+        fontSize: "13px",
+        marginBottom: "4px"
       }}
     >
-      Browse Products
-    </button>
+      PHONE
+    </div>
 
-    <button
-      onClick={() => setCartOpen(true)}
-      onMouseEnter={(e) => {
-  e.currentTarget.style.transform =
-    "translateY(-2px) scale(1.02)";
-}}
-
-onMouseLeave={(e) => {
-  e.currentTarget.style.transform =
-    "translateY(0px) scale(1)";
-}}
-      style={{
-        transition:
-  "transform 0.2s ease, box-shadow 0.2s ease",
-        background: "#1e3a5f",
-        color: "white",
-        border: "none",
-        padding: "14px 22px",
-        borderRadius: "10px",
-        fontWeight: "bold",
-        cursor: "pointer",
-        fontSize: "16px"
-      }}
-    >
-      Open Quote Cart
-    </button>
+    <div style={{ fontSize: "18px" }}>
+      (951) 270-1933
+    </div>
   </div>
+
+  <div style={{ marginBottom: "18px" }}>
+    <div
+      style={{
+        color: "#888",
+        fontSize: "13px",
+        marginBottom: "4px"
+      }}
+    >
+      EMAIL
+    </div>
+
+    <div style={{ fontSize: "18px" }}>
+      fioreelectricalinc@gmail.com
+    </div>
+  </div>
+
+  <div style={{ marginBottom: "18px" }}>
+    <div
+      style={{
+        color: "#888",
+        fontSize: "13px",
+        marginBottom: "4px"
+      }}
+    >
+      LOCATION
+    </div>
+
+    <div style={{ fontSize: "18px" }}>
+      Norco, California
+    </div>
+  </div>
+
+  <div>
+    <div
+      style={{
+        color: "#888",
+        fontSize: "13px",
+        marginBottom: "4px"
+      }}
+    >
+      HOURS
+    </div>
+
+    <div style={{ fontSize: "18px" }}>
+      Mon - Fri • 8AM - 4PM
+    </div>
+  </div>
+</div>
+  
+  </div>
+</div>
 </div>
 
       {/* 🔥 LOGIN HIDDEN UNLESS ?admin=true */}
@@ -693,6 +869,228 @@ onMouseLeave={(e) => {
 
       {user && <button onClick={logout}>Logout</button>}
 
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+      window.innerWidth < 768
+        ? "1fr"
+        : "repeat(4, 1fr)",
+    gap: "20px",
+    marginBottom: "35px"
+  }}
+>
+  {[
+    "Commercial Grade Equipment",
+    "Fast Quote Response",
+    "Trusted Supplier",
+    "Contractor Focused Service"
+  ].map((text, i) => (
+    <div
+      key={i}
+      style={{
+        background: "rgba(17,24,39,0.72)",
+        border:
+          "1px solid rgba(255,255,255,0.08)",
+        borderRadius: "18px",
+        padding: "22px",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        boxShadow:
+          "0 0 20px rgba(0,0,0,0.22)",
+        fontWeight: "bold",
+        fontSize: "16px"
+      }}
+    >
+      ✓ {text}
+    </div>
+  ))}
+</div>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+      window.innerWidth < 768
+        ? "1fr"
+        : "repeat(3, 1fr)",
+    gap: "20px",
+    marginBottom: "35px"
+  }}
+>
+  {[
+    {
+      number: "500+",
+      label: "Products Available"
+    },
+    {
+      number: "24hr",
+      label: "Average Quote Response"
+    },
+    {
+      number: "SoCal",
+      label: "Service Area"
+    }
+  ].map((stat, i) => (
+    <div
+      key={i}
+      style={{
+        background:
+          "linear-gradient(to right, rgba(17,24,39,0.85), rgba(10,10,10,0.85))",
+        border:
+          "1px solid rgba(255,255,255,0.08)",
+        borderRadius: "20px",
+        padding: "30px",
+        textAlign: "center",
+        boxShadow:
+          "0 0 25px rgba(0,0,0,0.25)"
+      }}
+    >
+      <div
+        style={{
+          fontSize: "42px",
+          fontWeight: "bold",
+          color: "#ff2b2b",
+          marginBottom: "10px"
+        }}
+      >
+        {stat.number}
+      </div>
+
+      <div
+        style={{
+          color: "#b0b0b0",
+          fontSize: "16px"
+        }}
+      >
+        {stat.label}
+      </div>
+    </div>
+  ))}
+</div>
+<div
+  style={{
+    marginBottom: "40px",
+    background:
+      "rgba(17,24,39,0.72)",
+    border:
+      "1px solid rgba(255,255,255,0.08)",
+    borderRadius: "20px",
+    padding: "30px"
+  }}
+>
+  <div
+    style={{
+      fontSize: "24px",
+      fontWeight: "bold",
+      marginBottom: "25px"
+    }}
+  >
+    Featured Brands
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns:
+        window.innerWidth < 768
+          ? "repeat(2, 1fr)"
+          : "repeat(5, 1fr)",
+      gap: "20px",
+      textAlign: "center"
+    }}
+  >
+    {[
+      "Siemens",
+      "Eaton",
+      "Milwaukee",
+      "Halex",
+      "Square D"
+    ].map((brand, i) => (
+      <div
+        key={i}
+        style={{
+          padding: "20px",
+          borderRadius: "14px",
+          background:
+            "rgba(255,255,255,0.03)",
+          fontWeight: "bold",
+          fontSize: "18px",
+          color: "#d0d0d0"
+        }}
+      >
+        {brand}
+      </div>
+    ))}
+  </div>
+</div>
+<div
+  style={{
+    display: "flex",
+    gap: "15px",
+    flexWrap: "wrap",
+    marginBottom: "30px",
+    alignItems: "center"
+  }}
+>
+  <select
+  value={filterCategory}
+  onChange={(e) =>
+    setFilterCategory(e.target.value)
+  }
+  style={{
+    background: "#111827",
+    color: "white",
+    border: "1px solid #1e3a5f",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    fontSize: "15px"
+  }}
+>
+  <option value="All">
+    All Categories
+  </option>
+
+  {categories.map((cat) => (
+    <option
+      key={cat}
+      value={cat}
+    >
+      {cat}
+    </option>
+  ))}
+</select>
+
+  <select
+    value={selectedPrice}
+    onChange={(e) =>
+      setSelectedPrice(e.target.value)
+    }
+    style={{
+      background: "#111827",
+      color: "white",
+      border: "1px solid #1e3a5f",
+      padding: "12px 16px",
+      borderRadius: "10px",
+      fontSize: "15px"
+    }}
+  >
+    <option value="All">
+      All Prices
+    </option>
+
+    <option value="0-100">
+      Under $100
+    </option>
+
+    <option value="100-500">
+      $100 - $500
+    </option>
+
+    <option value="500+">
+      $500+
+    </option>
+  </select>
+</div>
       {/* CATEGORY TABS */}
       <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
         {categories.map((cat) => (
@@ -749,19 +1147,55 @@ onMouseLeave={(e) => {
         id="products-section"
     style={{
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 320px))",
+      gridTemplateColumns:
+  window.innerWidth < 768
+    ? "1fr"
+    : "repeat(auto-fit, minmax(280px, 320px))",
       justifyContent: "start",
       gap: "20px",
       marginTop: "20px"
     }}
   >
     {items
-      .filter(
-  (item) =>
-    item.category === selectedCategory &&
-    item.name.toLowerCase().includes(search.toLowerCase())
-)
-      .map((item) => (
+  .filter((item) => {
+    const matchesSearch =
+      item.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+    const matchesCategory =
+  item.category === selectedCategory &&
+  (
+    filterCategory === "All" ||
+    item.category === filterCategory
+  );
+
+    const firstPrice =
+      item.sizes_json?.[0]?.price || 0;
+
+    let matchesPrice = true;
+
+    if (selectedPrice === "0-100") {
+      matchesPrice = firstPrice < 100;
+    }
+
+    if (selectedPrice === "100-500") {
+      matchesPrice =
+        firstPrice >= 100 &&
+        firstPrice <= 500;
+    }
+
+    if (selectedPrice === "500+") {
+      matchesPrice = firstPrice > 500;
+    }
+
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesPrice
+    );
+  })
+  .map((item) => (
         <div
   key={item.id}
   onClick={() => setSelectedProduct(item)}
@@ -1038,7 +1472,10 @@ onMouseLeave={(e) => {
       position: "fixed",
       top: 0,
       right: 0,
-      width: "400px",
+      width:
+  window.innerWidth < 768
+    ? "100%"
+    : "400px",
       height: "100vh",
       background: "#111827",
       borderLeft: "2px solid #1e3a5f",
@@ -1299,6 +1736,47 @@ onMouseLeave={(e) => {
   </div>
 )}
 
+<div
+  style={{
+    position: "fixed",
+    bottom: "20px",
+    right: "20px",
+    zIndex: 8000
+  }}
+>
+  <button
+    onClick={() => setCartOpen(true)}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform =
+        "scale(1.06)";
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform =
+        "scale(1)";
+    }}
+    style={{
+      transition:
+        "transform 0.2s ease, box-shadow 0.2s ease",
+      background:
+        "linear-gradient(to right, #d10000, #ff2b2b)",
+      color: "white",
+      border: "none",
+      borderRadius: "999px",
+      padding: "16px 20px",
+      fontWeight: "bold",
+      cursor: "pointer",
+      boxShadow:
+        "0 0 25px rgba(209,0,0,0.35)",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      fontSize: "15px"
+    }}
+  >
+    🛒 {cart.length}
+  </button>
+</div>
+
 {showToast && (
   <div
   onMouseEnter={(e) => {
@@ -1379,7 +1857,10 @@ onMouseLeave={(e) => {
         width: "100%",
         maxHeight: "90vh",
         overflowY: "auto",
-        padding: "30px",
+        padding:
+  window.innerWidth < 768
+    ? "20px"
+    : "30px",
         boxShadow: "0 0 40px rgba(0,0,0,0.45)"
       }}
     >
@@ -1494,7 +1975,88 @@ onMouseLeave={(e) => {
             <option>Equipment</option>
             <option>Vehicles</option>
           </select>
+<h3
+  style={{
+    marginTop: "30px",
+    marginBottom: "15px"
+  }}
+>
+  Manage Categories
+</h3>
 
+<div
+  style={{
+    display: "flex",
+    gap: "10px",
+    marginBottom: "20px"
+  }}
+>
+  <input
+    placeholder="New Category"
+    value={newCategoryName}
+    onChange={(e) =>
+      setNewCategoryName(e.target.value)
+    }
+    style={inputStyle}
+  />
+
+  <button
+    onClick={addCategory}
+    style={{
+      background: "#1e3a5f",
+      color: "white",
+      border: "none",
+      padding: "12px 18px",
+      borderRadius: "10px",
+      cursor: "pointer",
+      fontWeight: "bold"
+    }}
+  >
+    Add
+  </button>
+</div>
+
+<div
+  style={{
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    marginBottom: "25px"
+  }}
+>
+  {categories.map((cat) => (
+    <div
+      key={cat}
+      style={{
+        background: "#111827",
+        border: "1px solid #1e3a5f",
+        padding: "10px 14px",
+        borderRadius: "10px",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px"
+      }}
+    >
+      <span>{cat}</span>
+
+      <button
+        onClick={() =>
+          deleteCategory(cat)
+        }
+        style={{
+          background: "#d10000",
+          color: "white",
+          border: "none",
+          borderRadius: "6px",
+          padding: "4px 8px",
+          cursor: "pointer"
+        }}
+      >
+        X
+      </button>
+    </div>
+  ))}
+</div>
           <input placeholder="Product Name" value={newName} onChange={(e) => setNewName(e.target.value)} style={inputStyle} />
           {newSizes.map((s, index) => (
   <div
