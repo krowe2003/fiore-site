@@ -11,6 +11,15 @@ const supabase = createClient(
   input::placeholder,
   textarea::placeholder {
     color: #8b949e;
+    @keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
   }
 `}</style>
 
@@ -50,6 +59,7 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("Parts");
   const [cart, setCart] = useState<
+  
   {
     name: string;
     size: {
@@ -60,6 +70,8 @@ export default function Home() {
     quantity: number;
   }[]
 >([]);
+
+  const TAX_RATE = 0.0875;
   const [loading, setLoading] = useState(true);
 
   const [user, setUser] = useState<any>(null);
@@ -79,6 +91,10 @@ export default function Home() {
   useState("");
   const [newCategoryName, setNewCategoryName] =
   useState("");
+  const [
+  newFilterCategoryName,
+  setNewFilterCategoryName
+] = useState("");
   
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] =
@@ -94,60 +110,94 @@ const [selectedPrice, setSelectedPrice] =
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
   const [search, setSearch] = useState("");
+  const [isMobile, setIsMobile] =
+  useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [adminMessage, setAdminMessage] = useState("");
   const [categories, setCategories] =
   useState<string[]>([]);
 
-  useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
+  const [
+  filterCategories,
+  setFilterCategories
+] = useState<string[]>([]);
 
-  const savedCart = localStorage.getItem("fiore-cart");
+ useEffect(() => {
+  const params = new URLSearchParams(
+    window.location.search
+  );
+
+  const handleResize = () => {
+    setIsMobile(window.innerWidth < 768);
+  };
+
+  handleResize();
+
+  window.addEventListener(
+    "resize",
+    handleResize
+  );
+
+  const savedCart =
+    localStorage.getItem("fiore-cart");
 
   if (savedCart) {
-  const parsed = JSON.parse(savedCart);
+    const parsed = JSON.parse(
+      savedCart || "[]"
+    );
 
-  const normalized = parsed.map((item: any) => ({
-    ...item,
+    const normalized = parsed.map(
+      (item: any) => ({
+        ...item,
+        size:
+          typeof item.size === "object"
+            ? item.size
+            : {
+                size: item.size,
+                price: item.price || 0
+              }
+      })
+    );
 
-    size:
-      typeof item.size === "object"
-        ? item.size
-        : {
-            size: item.size,
-            price: item.price || 0
-          }
-  }));
-
-  setCart(normalized);
-}
+    setCart(normalized);
+  }
 
   if (params.get("admin") === "true") {
     setShowAdminLogin(true);
   }
 
   const getUser = async () => {
-    const { data } = await supabase.auth.getUser();
+    const { data } =
+      await supabase.auth.getUser();
+
     setUser(data.user);
   };
 
   getUser();
+
+setEditingId(null);
+setNewDescription("");
+
   fetchProducts();
-  
-  setAdminMessage("✓ Product Deleted");
+  fetchCategories();
+  fetchFilterCategories();
 
-setTimeout(() => {
-  setAdminMessage("");
-}, 2000);
+  const { data: listener } =
+    supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
 
-  const { data: listener } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
-      setUser(session?.user ?? null);
-    }
-  );
+  return () => {
+    window.removeEventListener(
+      "resize",
+      handleResize
+    );
 
-  return () => listener.subscription.unsubscribe();
+    listener.subscription.unsubscribe();
+  };
 }, []);
 
 useEffect(() => {
@@ -204,6 +254,40 @@ const deleteCategory = async (
 
   fetchCategories();
 };
+const addFilterCategory =
+  async () => {
+    if (!newFilterCategoryName)
+      return;
+
+    const { error } =
+      await supabase
+        .from("filter_categories")
+        .insert([
+          {
+            name:
+              newFilterCategoryName
+          }
+        ]);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setNewFilterCategoryName("");
+
+    fetchFilterCategories();
+  };
+
+const deleteFilterCategory =
+  async (name: string) => {
+    await supabase
+      .from("filter_categories")
+      .delete()
+      .eq("name", name);
+
+    fetchFilterCategories();
+  };
   const fetchProducts = async () => {
   setLoading(true);
 
@@ -241,6 +325,24 @@ const deleteCategory = async (
 
   setLoading(false);
 };
+const fetchFilterCategories =
+  async () => {
+    const { data, error } =
+      await supabase
+        .from("filter_categories")
+        .select("*");
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    if (data) {
+      setFilterCategories(
+        data.map((c: any) => c.name)
+      );
+    }
+  };
   const login = async () => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -256,25 +358,34 @@ const deleteCategory = async (
   };
 
   const uploadImage = async () => {
-    if (!file) return null;
+  if (!file) return null;
 
-    const fileName = `${Date.now()}-${file.name}`;
+  const fileExt =
+    file.name.split(".").pop();
 
-    const { error } = await supabase.storage
+  const fileName =
+    `${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } =
+    await supabase.storage
       .from("product-images")
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        upsert: true
+      });
 
-    if (error) {
-      alert("Upload failed");
-      return null;
-    }
+  if (uploadError) {
+    alert(uploadError.message);
+    return null;
+  }
 
-    const { data } = supabase.storage
-      .from("product-images")
-      .getPublicUrl(fileName);
+  const {
+    data: { publicUrl }
+  } = supabase.storage
+    .from("product-images")
+    .getPublicUrl(fileName);
 
-    return data.publicUrl;
-  };
+  return publicUrl;
+};
 
   const addProduct = async () => {
       alert("clicked");
@@ -284,12 +395,17 @@ const deleteCategory = async (
     if (!user) return alert("Login required");
     if (!newName) return alert("Enter a name");
 
-    let imageUrl = newImage;
+   let imageUrl = newImage;
 
-    if (file) {
-      const uploaded = await uploadImage();
-      if (uploaded) imageUrl = uploaded;
-    }
+if (file) {
+  const uploaded =
+    await uploadImage();
+
+  if (uploaded) {
+    imageUrl = uploaded;
+    setNewImage(imageUrl);
+  }
+}
 
     console.log(newSizes);
 
@@ -340,13 +456,22 @@ setTimeout(() => {
     setNewImage("");
     setFile(null);
 
+    setEditingId(null);
+    setNewDescription("");
+
     fetchProducts();
   };
 
   const deleteProduct = async (id: number) => {
-    await supabase.from("products").delete().eq("id", id);
-    fetchProducts();
-  };
+  await supabase
+    .from("products")
+    .delete()
+    .eq("id", id);
+
+  fetchProducts();
+  fetchCategories();
+};
+  
 const startEdit = (item: Item) => {
   setEditingId(item.id);
 
@@ -361,12 +486,15 @@ const startEdit = (item: Item) => {
   );
 
   setNewImage(item.image || "");
+  setFile(null);
   setNewDescription(item.description || "");
 
+  if (typeof window !== "undefined") {
   window.scrollTo({
     top: 0,
     behavior: "smooth"
   });
+}
 };
  const addToCart = (name: string, item: any) => {
   const sizeObj = {
@@ -564,10 +692,7 @@ ${customerNotes}
     gap: "20px",
     width: "100%",
     flexWrap:
-      typeof window !== "undefined" &&
-      window.innerWidth < 768
-        ? "wrap"
-        : "nowrap"
+  isMobile ? "wrap" : "nowrap"
   }}
 >
 <div
@@ -598,7 +723,7 @@ ${customerNotes}
       style={{
         color: "#ff2b2b",
         fontSize:
-  window.innerWidth < 768
+  isMobile
     ? "30px"
     : "48px",
         margin: 0,
@@ -618,6 +743,7 @@ ${customerNotes}
     >
       Commercial Electrical Equipment & Supply
     </p>
+  
     </div>
 
   <div
@@ -684,6 +810,91 @@ ${customerNotes}
     >
       Open Quote Cart
     </button>
+    
+<button
+  onClick={() => {
+    window.location.href =
+      `mailto:fioreelectricalinc@gmail.com?subject=Sell Surplus Equipment To Fiore&body=${encodeURIComponent(
+`Company Name:
+
+Contact Name:
+
+Phone Number:
+
+Email Address:
+
+Equipment Manufacturer:
+
+Model Number:
+
+Description:
+
+Condition:
+
+Quantity Available:
+
+Location:
+
+Asking Price:
+
+Additional Notes:
+
+--------------------------------
+Please attach photos if available.
+`
+      )}`;
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform =
+      "translateY(-2px) scale(1.02)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform =
+      "translateY(0px) scale(1)";
+  }}
+  style={{
+    transition:
+      "transform 0.2s ease, box-shadow 0.2s ease",
+    background: "#374151",
+    color: "white",
+    border: "none",
+    padding: "14px 22px",
+    borderRadius: "10px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    fontSize: "16px"
+  }}
+>
+  ⚙️ Sell Surplus Equipment
+</button>
+<button
+  onClick={() => {
+    window.location.href =
+      "/locator-network";
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform =
+      "translateY(-2px) scale(1.02)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform =
+      "translateY(0px) scale(1)";
+  }}
+  style={{
+    transition:
+      "transform 0.2s ease, box-shadow 0.2s ease",
+    background: "#1d9bf0",
+    color: "white",
+    border: "none",
+    padding: "14px 22px",
+    borderRadius: "10px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    fontSize: "16px"
+  }}
+>
+  🔍 Locator Network
+</button>
   </div>
 </div>
 
@@ -718,7 +929,7 @@ ${customerNotes}
   style={{
     display: "grid",
     gridTemplateColumns:
-  window.innerWidth < 900
+  isMobile
     ? "1fr"
     : "2fr 1fr",
     gap: "25px",
@@ -729,7 +940,7 @@ ${customerNotes}
   <div
     style={{
       fontSize:
-  window.innerWidth < 768
+  isMobile
     ? "34px"
     : "54px",
       fontWeight: "bold",
@@ -755,7 +966,24 @@ ${customerNotes}
     professionals with reliable equipment and
     supply solutions.
   </div>
-
+<div
+  style={{
+    marginTop: "-12px",
+    marginBottom: "30px",
+    display: "inline-block",
+    background:
+      "rgba(255,255,255,0.06)",
+    border:
+      "1px solid rgba(255,255,255,0.08)",
+    padding: "8px 14px",
+    borderRadius: "999px",
+    fontSize: "14px",
+    color: "#d0d0d0",
+    fontWeight: "bold"
+  }}
+>
+  ✓ New & Used Inventory Available
+</div>
   <div
     style={{
       display: "flex",
@@ -788,7 +1016,9 @@ ${customerNotes}
   >
     Contact Us
   </h2>
-
+<div
+>
+</div>
   <div style={{ marginBottom: "18px" }}>
     <div
       style={{
@@ -873,7 +1103,7 @@ ${customerNotes}
   style={{
     display: "grid",
     gridTemplateColumns:
-      window.innerWidth < 768
+     isMobile
         ? "1fr"
         : "repeat(4, 1fr)",
     gap: "20px",
@@ -910,7 +1140,7 @@ ${customerNotes}
   style={{
     display: "grid",
     gridTemplateColumns:
-      window.innerWidth < 768
+      isMobile
         ? "1fr"
         : "repeat(3, 1fr)",
     gap: "20px",
@@ -992,7 +1222,7 @@ ${customerNotes}
     style={{
       display: "grid",
       gridTemplateColumns:
-        window.innerWidth < 768
+        isMobile
           ? "repeat(2, 1fr)"
           : "repeat(5, 1fr)",
       gap: "20px",
@@ -1025,6 +1255,131 @@ ${customerNotes}
 </div>
 <div
   style={{
+    marginBottom: "40px",
+    background:
+      "rgba(17,24,39,0.72)",
+    border:
+      "1px solid rgba(255,255,255,0.08)",
+    borderRadius: "20px",
+    padding: "35px"
+  }}
+>
+  <div
+    style={{
+      fontSize: "32px",
+      fontWeight: "bold",
+      marginBottom: "12px",
+      color: "#1d9bf0"
+    }}
+  >
+    🔍 Fiore Locator Network
+  </div>
+
+  <div
+    style={{
+      color: "#b0b0b0",
+      fontSize: "18px",
+      lineHeight: "1.6",
+      marginBottom: "30px",
+      maxWidth: "900px"
+    }}
+  >
+   Need hard-to-find electrical equipment?
+
+  We source disconnects, breakers, switchgear,
+  transformers, MCC equipment, and surplus
+  electrical inventory through our nationwide
+  supplier network.
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns:
+        isMobile
+          ? "1fr"
+          : "repeat(3, 1fr)",
+      gap: "20px",
+      marginBottom: "25px"
+    }}
+  >
+    <div
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        padding: "20px",
+        borderRadius: "14px"
+      }}
+    >
+      <h3>🔍 Need Equipment</h3>
+
+      <p style={{ color: "#b0b0b0" }}>
+        Submit a sourcing request for
+        hard-to-find electrical equipment.
+      </p>
+    </div>
+
+    <div
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        padding: "20px",
+        borderRadius: "14px"
+      }}
+    >
+      <h3>⚙️ Sell Equipment</h3>
+
+      <p style={{ color: "#b0b0b0" }}>
+        Turn surplus inventory into cash.
+        We actively purchase equipment.
+      </p>
+    </div>
+
+    <div
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        padding: "20px",
+        borderRadius: "14px"
+      }}
+    >
+      <h3>🤝 Network Partners</h3>
+
+      <p style={{ color: "#b0b0b0" }}>
+        Contractors, suppliers, and
+        surplus dealers helping locate
+        inventory nationwide.
+      </p>
+    </div>
+  </div>
+<button
+  onClick={() => {
+    window.location.href =
+      "/locator-network";
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform =
+      "translateY(-2px) scale(1.02)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform =
+      "translateY(0px) scale(1)";
+  }}
+  style={{
+    transition:
+      "transform 0.2s ease, box-shadow 0.2s ease",
+    background: "#1d9bf0",
+    color: "white",
+    border: "none",
+    padding: "14px 22px",
+    borderRadius: "10px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    fontSize: "16px"
+  }}
+>
+  Learn More →
+</button>
+</div>
+<div
+  style={{
     display: "flex",
     gap: "15px",
     flexWrap: "wrap",
@@ -1050,7 +1405,7 @@ ${customerNotes}
     All Categories
   </option>
 
-  {categories.map((cat) => (
+  {filterCategories.map((cat) => (
     <option
       key={cat}
       value={cat}
@@ -1140,7 +1495,91 @@ onMouseLeave={(e) => {
   }}
 />
 
-      {loading && <p>Loading...</p>}
+      {loading && (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns:
+        isMobile
+          ? "1fr"
+          : "repeat(auto-fit, minmax(280px, 320px))",
+      gap: "20px",
+      marginTop: "20px"
+    }}
+  >
+    {[...Array(6)].map((_, i) => (
+      <div
+        key={i}
+        style={{
+          background:
+            "rgba(17,24,39,0.72)",
+          border:
+            "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "18px",
+          padding: "20px",
+          height: "420px",
+          overflow: "hidden",
+          position: "relative"
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            height: "220px",
+            borderRadius: "12px",
+            marginBottom: "20px",
+            background:
+              "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%)",
+            backgroundSize: "200% 100%",
+            animation:
+              "shimmer 1.5s infinite"
+          }}
+        />
+
+        <div
+          style={{
+            width: "70%",
+            height: "20px",
+            borderRadius: "6px",
+            marginBottom: "15px",
+            background:
+              "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%)",
+            backgroundSize: "200% 100%",
+            animation:
+              "shimmer 1.5s infinite"
+          }}
+        />
+
+        <div
+          style={{
+            width: "40%",
+            height: "16px",
+            borderRadius: "6px",
+            marginBottom: "25px",
+            background:
+              "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%)",
+            backgroundSize: "200% 100%",
+            animation:
+              "shimmer 1.5s infinite"
+          }}
+        />
+
+        <div
+          style={{
+            width: "100%",
+            height: "45px",
+            borderRadius: "10px",
+            background:
+              "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%)",
+            backgroundSize: "200% 100%",
+            animation:
+              "shimmer 1.5s infinite"
+          }}
+        />
+      </div>
+    ))}
+  </div>
+)}
 
       {!loading && (
   <div
@@ -1148,7 +1587,7 @@ onMouseLeave={(e) => {
     style={{
       display: "grid",
       gridTemplateColumns:
-  window.innerWidth < 768
+  isMobile
     ? "1fr"
     : "repeat(auto-fit, minmax(280px, 320px))",
       justifyContent: "start",
@@ -1290,9 +1729,11 @@ onMouseLeave={(e) => {
         </div>
 
         <button
-          onClick={() =>
-            addToCart(item.name, sizeObj)
-          }
+          onClick={(e) => {
+  e.stopPropagation();
+
+  addToCart(item.name, sizeObj);
+}}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform =
               "translateY(-2px) scale(1.02)";
@@ -1328,7 +1769,10 @@ onMouseLeave={(e) => {
     }}
   >
     <button
-      onClick={() => startEdit(item)}
+      onClick={(e) => {
+  e.stopPropagation();
+  startEdit(item);
+}}
       onMouseEnter={(e) => {
   e.currentTarget.style.transform =
     "translateY(-2px) scale(1.02)";
@@ -1353,7 +1797,10 @@ onMouseLeave={(e) => {
     </button>
 
     <button
-      onClick={() => deleteProduct(item.id)}
+      onClick={(e) => {
+  e.stopPropagation();
+  deleteProduct(item.id);
+}}
       onMouseEnter={(e) => {
   e.currentTarget.style.transform =
     "translateY(-2px) scale(1.02)";
@@ -1473,7 +1920,7 @@ onMouseLeave={(e) => {
       top: 0,
       right: 0,
       width:
-  window.innerWidth < 768
+  isMobile
     ? "100%"
     : "400px",
       height: "100vh",
@@ -1659,53 +2106,90 @@ onMouseLeave={(e) => {
       onChange={(e) => setCustomerNotes(e.target.value)}
       style={inputStyle}
     />
-<div
-  style={{
-    marginTop: "20px",
-    marginBottom: "15px",
-    padding: "15px",
-    background: "#1a2332",
-    borderRadius: "10px",
-    border: "1px solid #1e3a5f"
-  }}
->
-  <div
-    style={{
-      fontSize: "14px",
-      color: "#b0b0b0",
-      marginBottom: "5px"
-    }}
-  >
-    Estimated Total
-  </div>
+   {(() => {
+  const subtotal = cart.reduce(
+    (sum, item) =>
+      sum + item.price * item.quantity,
+    0
+  );
 
-  <div
-    style={{
-      fontSize: "28px",
-      fontWeight: "bold",
-      color: "#1d9bf0"
-    }}
-  >
-    $
-    {cart
-      .reduce(
-        (sum, item) =>
-          sum + item.price * item.quantity,
-        0
-      )
-      .toFixed(2)}
-  </div>
+  const tax = subtotal * TAX_RATE;
 
-  <div
-    style={{
-      marginTop: "10px",
-      fontSize: "12px",
-      color: "#888"
-    }}
-  >
-    *Final Pricing will be confirmed upon quote review*
-  </div>
-</div>
+  const total = subtotal + tax;
+
+  return (
+    <div
+      style={{
+        marginTop: "20px",
+        marginBottom: "15px",
+        padding: "15px",
+        background: "#1a2332",
+        borderRadius: "10px",
+        border: "1px solid #1e3a5f"
+      }}
+    >
+      <div
+        style={{
+          fontSize: "14px",
+          color: "#b0b0b0",
+          marginBottom: "12px"
+        }}
+      >
+        Estimated Total
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "8px",
+          color: "#b0b0b0"
+        }}
+      >
+        <span>Subtotal</span>
+
+        <span>
+          ${subtotal.toFixed(2)}
+        </span>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "15px",
+          color: "#b0b0b0"
+        }}
+      >
+        <span>Estimated Tax</span>
+
+        <span>
+          ${tax.toFixed(2)}
+        </span>
+      </div>
+
+      <div
+        style={{
+          fontSize: "28px",
+          fontWeight: "bold",
+          color: "#1d9bf0"
+        }}
+      >
+        ${total.toFixed(2)}
+      </div>
+
+      <div
+        style={{
+          marginTop: "10px",
+          fontSize: "12px",
+          color: "#888"
+        }}
+      >
+        *Final Pricing will be confirmed upon quote review*
+      </div>
+    </div>
+  );
+})()}
     <button
       onClick={sendQuote}
       onMouseEnter={(e) => {
@@ -1858,7 +2342,7 @@ onMouseLeave={(e) => {
         maxHeight: "90vh",
         overflowY: "auto",
         padding:
-  window.innerWidth < 768
+  isMobile
     ? "20px"
     : "30px",
         boxShadow: "0 0 40px rgba(0,0,0,0.45)"
@@ -1967,21 +2451,75 @@ onMouseLeave={(e) => {
   </div>
 )}
       {user && (
-        <div>
+        <div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+      isMobile
+        ? "1fr"
+        : "1fr 2fr",
+    gap: "25px",
+    alignItems: "start",
+    marginTop: "40px"
+  }}
+>
+  <h1
+  style={{
+    fontSize: "42px",
+    marginTop: 0,
+    marginBottom: "10px"
+  }}
+>
+  Admin Dashboard
+</h1>
+
+<p
+  style={{
+    color: "#9ca3af",
+    marginBottom: "30px"
+  }}
+>
+  Manage inventory, categories, and products.
+</p>
           <h2>Admin</h2>
 
-          <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} style={inputStyle}>
-            <option>Parts</option>
-            <option>Equipment</option>
-            <option>Vehicles</option>
-          </select>
+          <select
+  value={newCategory}
+  onChange={(e) =>
+    setNewCategory(e.target.value)
+  }
+  style={inputStyle}
+>
+  {categories.map((cat) => (
+    <option
+      key={cat}
+      value={cat}
+    >
+      {cat}
+    </option>
+  ))}
+</select>
+<div
+  style={{
+    background: "rgba(17,24,39,0.72)",
+    border:
+      "1px solid rgba(255,255,255,0.08)",
+    borderRadius: "20px",
+    padding: "25px",
+    marginBottom: "25px",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    boxShadow:
+      "0 0 25px rgba(0,0,0,0.25)"
+  }}
+>
 <h3
   style={{
     marginTop: "30px",
     marginBottom: "15px"
   }}
 >
-  Manage Categories
+  Main Categories
 </h3>
 
 <div
@@ -2056,6 +2594,129 @@ onMouseLeave={(e) => {
       </button>
     </div>
   ))}
+  
+  <h3
+  style={{
+    marginTop: "30px",
+    marginBottom: "15px"
+  }}
+>
+  Filter Categories
+</h3>
+
+<div
+  style={{
+    display: "flex",
+    gap: "10px",
+    marginBottom: "20px"
+  }}
+>
+  <input
+    placeholder="New Filter Category"
+    value={newFilterCategoryName}
+    onChange={(e) =>
+      setNewFilterCategoryName(
+        e.target.value
+      )
+    }
+    style={inputStyle}
+  />
+
+  <button
+    onClick={addFilterCategory}
+    style={{
+      background: "#1e3a5f",
+      color: "white",
+      border: "none",
+      padding: "12px 18px",
+      borderRadius: "10px",
+      cursor: "pointer",
+      fontWeight: "bold"
+    }}
+  >
+    Add
+  </button>
+</div>
+
+<div
+  style={{
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    marginBottom: "25px"
+  }}
+>
+  {filterCategories.map((cat) => (
+    <div
+      key={cat}
+      style={{
+        background: "#111827",
+        border: "1px solid #1e3a5f",
+        padding: "10px 14px",
+        borderRadius: "10px",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px"
+      }}
+    >
+      <span>{cat}</span>
+
+      <button
+        onClick={() =>
+          deleteFilterCategory(cat)
+        }
+        style={{
+          background: "#d10000",
+          color: "white",
+          border: "none",
+          borderRadius: "6px",
+          padding: "4px 8px",
+          cursor: "pointer"
+        }}
+      >
+        X
+      </button>
+    </div>
+  ))}
+</div>
+</div>
+</div>
+
+<div
+  style={{
+    background: "rgba(17,24,39,0.72)",
+    border:
+      "1px solid rgba(255,255,255,0.08)",
+    borderRadius: "20px",
+    padding: "25px",
+    marginBottom: "25px",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    boxShadow:
+      "0 0 25px rgba(0,0,0,0.25)"
+  }}
+>
+<h2
+  style={{
+    marginTop: 0,
+    marginBottom: "25px",
+    fontSize: "28px"
+  }}
+>
+  
+  Product Editor
+</h2>
+<div
+  style={{
+    fontSize: "14px",
+    color: "#9ca3af",
+    marginBottom: "10px",
+    marginTop: "20px",
+    textTransform: "uppercase",
+    letterSpacing: "1px"
+  }}
+>
+  Product Information
 </div>
           <input placeholder="Product Name" value={newName} onChange={(e) => setNewName(e.target.value)} style={inputStyle} />
           {newSizes.map((s, index) => (
@@ -2152,7 +2813,26 @@ onMouseLeave={(e) => {
 >
   + Add Size
 </button>
+<div
+  style={{
+    height: "1px",
+    background:
+      "rgba(255,255,255,0.08)",
+    margin: "30px 0"
+  }}
+/>
 
+<div
+  style={{
+    fontSize: "14px",
+    color: "#9ca3af",
+    marginBottom: "15px",
+    textTransform: "uppercase",
+    letterSpacing: "1px"
+  }}
+>
+  Product Media
+</div>
           <input placeholder="Image URL (optional)" value={newImage} onChange={(e) => setNewImage(e.target.value)} style={inputStyle} />
 <textarea
   placeholder="Product Description"
@@ -2195,9 +2875,12 @@ onMouseLeave={(e) => {
   <input
     type="file"
     accept="image/*"
-    onChange={(e) =>
-      setFile(e.target.files?.[0] || null)
-    }
+    onChange={(e) => {
+  const selected =
+    e.target.files?.[0] || null;
+
+  setFile(selected);
+}}
     style={{ display: "none" }}
   />
 </label>
@@ -2244,6 +2927,7 @@ onMouseLeave={(e) => {
       ]);
       setNewCategory("Parts");
       setNewImage("");
+      setFile(null);
     }}
     onMouseEnter={(e) => {
   e.currentTarget.style.transform =
@@ -2269,6 +2953,7 @@ onMouseLeave={(e) => {
     Cancel Edit
   </button>
 )}
+</div>
         </div>
       )}
 
